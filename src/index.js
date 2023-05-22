@@ -3,9 +3,9 @@ const mongoose = require("mongoose")
 const route = require("./router/router")
 
 const app = express()
-const multer= require("multer");
+//const multer= require("multer");
 
-app.use( multer().any())
+//app.use( multer().any())
 app.use(express.json());
 var cors = require('cors');
 app.use(cors());
