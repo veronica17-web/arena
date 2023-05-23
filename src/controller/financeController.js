@@ -1,56 +1,55 @@
-const financeModel =require("../model/financeModel")
-const {isValid,isValidBody, isMobileNumber, isValidEmail,isValidPincode,checkPassword,checkname,checkISBN,checkDate,isRating,}=require("../validation/validation")
+const financeModel = require("../model/financeModel");
+const moment = require("moment");
+require("moment-timezone");
+const {
+  isValid,
+  isValidBody,
+  isMobileNumber,
+  isValidEmail,
+  isValidPincode,
+  checkPassword,
+  checkname,
+  checkISBN,
+  checkDate,
+  isRating,
+} = require("../validation/validation");
 
-const finance = async(req,res)=>{
-    try {
-        let data = req.body
-        let {name,email,phone,outlet,comments,model,purchaseTime,loanAmount,loanDuration}= data  
-        if (isValidBody(data)) return res.status(400).send({ status: false, message: "Enter the data to submit" });
-        if (!name) return res.status(400).send({ status: false, message: "name is required" });
-        if (!phone) return res.status(400).send({ status: false, message: "name is required" });
-        if(outlet){
-           let outlets = ["Hyderabad","secunderabad"];
-           if (!outlets.includes(outlet)) return res.status(400).send({ status: false, msg: `outlet must be slected among ${outlets}` });
-        }
-        if(model){
-           let models = ["Alto K10","Brezza","Sift","Dzire","Spresso","WagonR","Alto","Ertiga","EECO"];
-           if (!models.includes(model)) return res.status(400).send({ status: false, msg: `outlet must be slected among ${models}` });
-        }
-       
-        if(purchaseTime){
-           let purchaseTimes = ["Immediate","2Weeks","3weeks","4weeks","4-6weeks","6+weeks"];
-           if (!purchaseTimes.includes(purchaseTime)) return res.status(400).send({ status: false, msg: `outlet must be slected among ${purchaseTimes}` });
-        }
-       if(loanAmount ||loanDuration ){
-           if (isValid(loanAmount ||loanDuration)) {
-               return res.status(400).send({ status: false, message: "input should me number" })
-           };
-       }
-       var currentdate = new Date();
-       var datetime = currentdate.getDay() + "-" + currentdate.getMonth()
-           + "-" + currentdate.getFullYear()
-       let time = + currentdate.getHours() + ":"
-           + currentdate.getMinutes() + ":" + currentdate.getSeconds();
-       data.date = datetime
-       data.time = time
-       let getdataCount = await financeModel.find().count()
-       data.sno = getdataCount + 1
-        let saveDate = await financeModel.create(data)
-        res.status(201).send({status:true,data:saveDate})
-    } catch (error) {
-        return res.status(500).send({ status: false, message: error.message });
-    }
-  
-}
+const finance = async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  try {
+    let data = req.body;
+
+    moment.tz.setDefault("Asia/Kolkata");
+    let dates = moment().format("DD-MM-YYYY");
+    let times = moment().format("HH:mm:ss");
+    data.date = dates;
+    data.time = times;
+    let saveDate = await financeModel.create(data);
+    res.status(201).send({ status: true, data: saveDate });
+  } catch (error) {
+    return res.status(500).send({ status: false, message: error.message });
+  }
+};
 //=================================================================
-const getfinanace = async (req,res)=>{
-    try {
-        //let filter = { isDeleted: false }
-        let data = await financeModel.find()
-        res.status(200).send({ status: true, data: data })
-    } catch (error) {
-        return res.send({ status: false, message: error.message })
+const getfinanace = async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  try {
+   
+    const filter = req.query;
+    const sortOptions = {}; 
+ 
+    if (Object.keys(filter).length === 0) {
+      // No query parameters provided, sort by createdAt in descending order
+      sortOptions.createdAt = -1;
+      const data = await financeModel.find({isDeleted:false}).sort(sortOptions);
+      return res.status(200).send({ status: true, data: data });
+    } else {
+      // Sort by the provided filter parameters
+      const data = await financeModel.find({isDeleted:false}).distinct("phone");;
+      return res.status(200).send({ status: true, data: data });
     }
-
-}
-module.exports ={finance,getfinanace}
+  } catch (error) {
+    return res.send({ status: false, message: error.message });
+  }
+};
+module.exports = { finance, getfinanace };

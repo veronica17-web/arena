@@ -46,8 +46,12 @@ const financeSchema = new mongoose.Schema({
     time :{
         type:String,
     },
-    sno:{
-        type:String
-    }
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deletedAt: {
+        type: Date
+    },
 }, { timestamps: true })
 module.exports = mongoose.model('finance', financeSchema)

@@ -15,6 +15,7 @@ const {
 } = require("../validation/validation");
 
 const drivingform = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
   try {
     let data = req.body;
     //         {if (isValidBody(data)) return res.status(400).send({ status: false, message: "Enter the data to submit" });

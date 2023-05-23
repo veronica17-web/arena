@@ -1,51 +1,106 @@
-const insuranceModel = require("../model/insuranceModel")
-const {isValid,isValidBody, isMobileNumber, isValidEmail,isValidPincode,checkPassword,checkname,checkISBN,checkDate,isRating,}=require("../validation/validation")
+const insuranceModel = require("../model/insuranceModel");
+const moment = require("moment");
+require("moment-timezone");
+const {
+  isValid,
+  isValidBody,
+  isMobileNumber,
+  isValidEmail,
+  isValidPincode,
+  checkPassword,
+  checkname,
+  checkISBN,
+  checkDate,
+  isRating,
+} = require("../validation/validation");
 
-const insuranceForm = async (req,res)=>{
-    try {
-        let data = req.body
-    let{name,email,phone,outlet}=data
-    if (isValidBody(data)) return res.status(400).send({ status: false, message: "Enter the data to submit" });
-    if (!name) return res.status(400).send({ status: false, message: "name is required" });
+const insuranceForm = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  try {
+    let data = req.body;
+    let { name, email, phone, outlet } = data;
 
-    // if (!email) return res.status(400).send({ status: false, message: "email is required" });
+    moment.tz.setDefault("Asia/Kolkata");
+    let dates = moment().format("DD-MM-YYYY");
+    let times = moment().format("HH:mm:ss");
+    data.date = dates;
+    data.time = times;
 
-    if (!phone) return res.status(400).send({ status: false, message: "phone is required" });
-    if (!isMobileNumber(phone.trim())) return res.status(400).send({ status: false, message: "Please Enter a valid Phone number" });
-    //checking if phone already exist or not
-    // let duplicatemobile = await drivingSchoolModel.findOne({ mobile: mobile })
-    // if (duplicatemobile) return res.status(400).send({ status: false, message: "Phone already exist" })
+    let saveDate = await insuranceModel.create(data);
+    return res.status(201).send({ status: true, data: saveDate });
+  } catch (error) {
+    return res.status(500).send({ status: false, message: error.message });
+  }
+};
 
-    if (!outlet) return res.status(400).send({ status: false, message: "outlet is required" });
+const getInsurance = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  try {
+    const filter = req.query;
 
-    let outlets = ["MDS-Kushaiguda","MDS-Nampally","MDS-Malakpet"];
-        if (!outlets.includes(outlet)) return res.status(400).send({ status: false, msg: `role must be slected among ${outlets}` });
+    let data = [];
 
-        var currentdate = new Date();
-        var datetime = currentdate.getDay() + "-" + currentdate.getMonth()
-            + "-" + currentdate.getFullYear()
-        let times = + currentdate.getHours() + ":"
-            + currentdate.getMinutes() + ":" + currentdate.getSeconds();
-        data.date = datetime
-        data.time = times
-        let getdataCount = await insuranceModel.find().count()
-        data.sno = getdataCount + 1
-    let saveDate = await insuranceModel.create(data)
-    return res.status(201).send({status:true,data:saveDate})
-    } catch (error) {
-        return res.status(500).send({ status: false, message: error.message });
+    if (Object.keys(filter).length === 0) {
+      // No query parameters provided
+      data = await insuranceModel.aggregate([
+        { $match: { isDeleted: false } },
+        { $group: { _id: "$phone", doc: { $first: "$$ROOT" } } },
+        { $replaceRoot: { newRoot: "$doc" } },
+      ]);
+    } else {
+      data = await insuranceModel.aggregate([
+        { $match: { isDeleted: false } },
+        {
+          $sort: {
+            [Object.keys(filter)[0]]: parseInt(Object.values(filter)[0], 10),
+          },
+        },
+        { $group: { _id: "$phone", doc: { $first: "$$ROOT" } } },
+        { $replaceRoot: { newRoot: "$doc" } },
+      ]);
     }
-    
-}
 
-const getInsurance = async (req,res)=>{
+    return res.status(200).send({ status: true, data: data });
+  } catch (error) {
+    return res.status(500).send({ status: false, message: error.message });
+  }
+};
+
+//===================================================================
+const dupilicateInsurance = async (req, res) => {
     try {
-        //let filter = { isDeleted: false }
-        let data = await insuranceModel.find()
-        res.status(200).send({ status: true, data: data })
+      const repeatedPhoneNumbers = await insuranceModel.aggregate([
+        { $group: { _id: "$phone", count: { $sum: 1 }, docs: { $push: "$$ROOT" } } },
+        { $match: { count: { $gt: 1 } } },
+        { $project: { _id: 0, phoneNumber: "$_id", count: 1, docs: 1 } }
+      ]);
+  
+      return res.status(200).send({ status: true, data: repeatedPhoneNumbers });
     } catch (error) {
-        return res.send({ status: false, message: error.message })
+      return res.status(500).send({ status: false, message: error.message });
     }
+  };
+  
+//====================================================================================
+const sortInsurance = async (req, res) => {
+  try {
+    const filter = req.query;
+    const sortOptions = {}; 
+ 
+    if (Object.keys(filter).length === 0) {
+      // No query parameters provided, sort by createdAt in descending order
+      sortOptions.createdAt = -1;
+      const data = await insuranceModel.find({isDeleted:false}).sort(sortOptions);
+      return res.status(200).send({ status: true, data: data });
+    } else {
+      // Sort by the provided filter parameters
+      const data = await insuranceModel.find({isDeleted:false}).sort(filter);
+      return res.status(200).send({ status: true, data: data });
+    }
+  } catch (error) {
+    return res.send({ status: false, message: error.message });
+  }
+  
+};
 
-}
-module.exports ={insuranceForm,getInsurance}
+module.exports = { insuranceForm, getInsurance ,dupilicateInsurance , sortInsurance};
