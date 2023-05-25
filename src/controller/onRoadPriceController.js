@@ -1,49 +1,154 @@
-const onRoadPriceModel = require('../model/onRoadPriceModel')
-const {isValid, isMobileNumber, isValidEmail,isValidPincode,checkPassword,checkname,checkISBN,checkDate,isRating,isValidBody}=require("../validation/validation")
-const onRoadPrice = async (req,res)=>{
-    try {
-        let data = req.body
-        let {name,email,phone,outlet,model}=data
-        if (!name) return res.status(400).send({ status: false, message: "name is required" });
-    
-        if (!phone) return res.status(400).send({ status: false, message: "phone is required" });
-        if (!isMobileNumber(phone.trim())) return res.status(400).send({ status: false, message: "Please Enter a valid Phone number" });
-        //checking if phone already exist or not
-        // let duplicatemobile = await drivingSchoolModel.findOne({ mobile: mobile })
-        // if (duplicatemobile) return res.status(400).send({ status: false, message: "Phone already exist" })
-    
-        if (!outlet) return res.status(400).send({ status: false, message: "outlet is required" });
-    
-        let outlets = ["RKS Motor-somajiguda","RKS Motor-malakpet","RKS Motor-secunderabad","RKS Motor-kushaiguda","RKS Motor-kukatpally","RKS Motor-kompally","RKS Motor-shamirpet"]
-            if (!outlets.includes(outlet)) return res.status(400).send({ status: false, msg: `role must be slected among ${outlets}` });
-     if(model){
-        let models=["Tour H1","Tour H3","Tour S","Tour v","Tour M"]
-        if (!models.includes(model)) return res.status(400).send({ status: false, msg: `role must be slected among ${models}` });
-     }
-            var currentdate = new Date();
-            var datetime = currentdate.getDay() + "-" + currentdate.getMonth()
-                + "-" + currentdate.getFullYear()
-            let times = + currentdate.getHours() + ":"
-                + currentdate.getMinutes() + ":" + currentdate.getSeconds();
-            data.date = datetime
-            data.time = times
-            let getdataCount = await onRoadPriceModel.find().count()
-            data.sno = getdataCount + 1
-        let saveDate = await onRoadPriceModel.create(data)
-        return res.status(201).send({status:true,data:saveDate})
-    } catch (error) {
-        return res.status(500).send({ status: false, message: error.message });
-    }
-  
-}
-const getOnRoadPrice = async (req,res)=>{
-    try {
-        //let filter = { isDeleted: false }
-        let data = await onRoadPriceModel.find()
-        res.status(200).send({ status: true, data: data })
-    } catch (error) {
-        return res.send({ status: false, message: error.message })
-    }
+const onRoadPriceModel = require("../model/onRoadPriceModel");
+const moment = require("moment");
+require("moment-timezone");
+const {
+  isValid,
+  isMobileNumber,
+  isValidEmail,
+  isValidPincode,
+  checkPassword,
+  checkname,
+  checkISBN,
+  checkDate,
+  isRating,
+  isValidBody,
+} = require("../validation/validation");
 
-}
-module.exports = {onRoadPrice,getOnRoadPrice}
+
+const onRoadPrice = async (req, res) => {
+  try {
+    let data = req.body;
+    moment.tz.setDefault("Asia/Kolkata");
+    let dates = moment().format("DD-MM-YYYY");
+    let times = moment().format("HH:mm:ss");
+    data.date = dates;
+    data.time = times;
+  
+    let getdataCount = await onRoadPriceModel.find().count();
+    data.sno = getdataCount + 1;
+    let saveDate = await onRoadPriceModel.create(data);
+    return res.status(201).send({ status: true, data: saveDate });
+  } catch (error) {
+    return res.status(500).send({ status: false, message: error.message });
+  }
+};
+//=================================================================================
+const getOnRoadPrice = async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    try {
+      const filter = req.query;
+      const sortOptions = {};
+      let data = [];
+  
+      if (Object.keys(filter).length === 0) {
+        // No query parameters provided
+        sortOptions.createdAt = -1;
+        const data = await onRoadPriceModel
+          .find({ isDeleted: false })
+          .sort(sortOptions);
+        return res.status(200).send({ status: true, data: data });
+      } else {
+        const filterDate = filter.date;
+  
+        data = await onRoadPriceModel.aggregate([
+          { $match: { isDeleted: false, date: filterDate } },
+          {
+            $group: {
+              _id: { phone: "$phone", model: "$model" },
+              doc: { $first: "$$ROOT" },
+            },
+          },
+          { $replaceRoot: { newRoot: "$doc" } },
+          { $sort: { createdAt: -1 } },
+        ]);
+      }
+  
+      return res.status(200).send({ status: true, data: data });
+    } catch (error) {
+      return res.status(500).send({ status: false, message: error.message });
+    }
+  };
+  
+
+//===========================================================================================
+const duplicateOnRoadPrice = async (req, res) => {
+    try {
+      const repeatedPhoneNumbers = await onRoadPriceModel.aggregate([
+        {
+          $group: {
+            _id: { phone: "$phone", model: "$model" },
+            count: { $sum: 1 },
+            docs: { $push: "$$ROOT" },
+          },
+        },
+        {
+          $group: {
+            _id: "$_id.phone",
+            phoneNumber: { $first: "$_id.phone" },
+            models: {
+              $push: {
+                model: "$_id.model",
+                count: "$count",
+                docs: "$docs",
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            phoneNumber: 1,
+            models: {
+              $cond: {
+                if: { $eq: [{ $size: "$models" }, 1] },
+                then: "$models",
+                else: {
+                  $reduce: {
+                    input: "$models",
+                    initialValue: [],
+                    in: {
+                      $cond: {
+                        if: { $eq: ["$$this.count", 1] },
+                        then: { $concatArrays: ["$$value", ["$$this"]] },
+                        else: "$$value",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        { $match: { $expr: { $gt: [{ $size: "$models" }, 0] } } },
+      ]);
+  
+      return res.status(200).send({ status: true, data: repeatedPhoneNumbers });
+    } catch (error) {
+      return res.status(500).send({ status: false, message: error.message });
+    }
+  };
+  
+  
+    
+  //====================================================================================
+  const sortOnRoadPrice = async (req, res) => {
+    try {
+      const filter = req.query;
+      const sortOptions = {}; 
+   
+      if (Object.keys(filter).length === 0) {
+        // No query parameters provided, sort by createdAt in descending order
+        sortOptions.createdAt = -1;
+        const data = await onRoadPriceModel.find({isDeleted:false}).sort(sortOptions);
+        return res.status(200).send({ status: true, data: data });
+      } else {
+        // Sort by the provided filter parameters
+        const data = await onRoadPriceModel.find({isDeleted:false}).sort(filter);
+        return res.status(200).send({ status: true, data: data });
+      }
+    } catch (error) {
+      return res.send({ status: false, message: error.message });
+    }
+    
+  };                                                                                                      
+module.exports = { onRoadPrice, getOnRoadPrice ,duplicateOnRoadPrice ,sortOnRoadPrice};

@@ -19,7 +19,7 @@ const OnroadPriceSchema = new mongoose.Schema({
     },
     model:{
         type:String,
-        enum :["Tour H1","Tour H3","Tour S","Tour v","Tour M"]
+        enum :["ALTO","ALTO k10","WAGON R","CELERIO","SWIFT","DZIRE","S-PRESSO","ERITGA","BREZZA","EECO"]
     },
     date:{
         type: String,
@@ -27,8 +27,12 @@ const OnroadPriceSchema = new mongoose.Schema({
     time :{
         type:String,
     },
-    sno:{
-        type:String
-    }
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    deletedAt: {
+        type: Date
+    },
 }, { timestamps: true })
 module.exports = mongoose.model('OnroadPrice', OnroadPriceSchema)

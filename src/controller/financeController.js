@@ -1,21 +1,9 @@
 const financeModel = require("../model/financeModel");
 const moment = require("moment");
 require("moment-timezone");
-const {
-  isValid,
-  isValidBody,
-  isMobileNumber,
-  isValidEmail,
-  isValidPincode,
-  checkPassword,
-  checkname,
-  checkISBN,
-  checkDate,
-  isRating,
-} = require("../validation/validation");
 
 const finance = async (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", "*");
   try {
     let data = req.body;
 
@@ -32,9 +20,59 @@ const finance = async (req, res) => {
 };
 //=================================================================
 const getfinanace = async (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", "*");
   try {
-   
+    const filter = req.query;
+    const sortOptions = {};
+    let data = [];
+
+    if (Object.keys(filter).length === 0) {
+      // No query parameters provided
+      sortOptions.createdAt = -1;
+      const data = await financeModel
+        .find({ isDeleted: false })
+        .sort(sortOptions);
+      return res.status(200).send({ status: true, data: data });
+    } else {
+      const filterDate = filter.date;
+
+      data = await financeModel.aggregate([
+        { $match: { isDeleted: false, date: filterDate } },
+        { $group: { _id: "$phone", doc: { $first: "$$ROOT" } } },
+        { $replaceRoot: { newRoot: "$doc" } },
+        { $sort: { createdAt: -1 } },
+      ]);
+    }
+
+    return res.status(200).send({ status: true, data: data });
+  } catch (error) {
+    return res.status(500).send({ status: false, message: error.message });
+  }
+};
+//====================================================================================================
+
+const dupilicateFinance = async (req, res) => {
+  try {
+    const repeatedPhoneNumbers = await financeModel.aggregate([
+      {
+        $group: {
+          _id: "$phone",
+          docs: { $push: "$$ROOT" },
+          count: { $sum: 1 },
+        },
+      },
+      { $match: { count: { $gt: 1 } } },
+      { $project: { _id: 0, phoneNumber: "$_id", count: 1, docs: 1 } },
+    ]);
+
+    return res.status(200).send({ status: true, data: repeatedPhoneNumbers });
+  } catch (error) {
+    return res.status(500).send({ status: false, message: error.message });
+  }
+};
+//=======================================================================================
+const sortFinance = async (req, res) => {
+  try {
     const filter = req.query;
     const sortOptions = {}; 
  
@@ -45,11 +83,13 @@ const getfinanace = async (req, res) => {
       return res.status(200).send({ status: true, data: data });
     } else {
       // Sort by the provided filter parameters
-      const data = await financeModel.find({isDeleted:false}).distinct("phone");;
+      const data = await financeModel.find({isDeleted:false}).sort(filter);
       return res.status(200).send({ status: true, data: data });
     }
   } catch (error) {
     return res.send({ status: false, message: error.message });
   }
+  
 };
-module.exports = { finance, getfinanace };
+
+module.exports = { finance, getfinanace , dupilicateFinance , sortFinance};

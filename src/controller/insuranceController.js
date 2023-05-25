@@ -13,6 +13,7 @@ const {
   checkDate,
   isRating,
 } = require("../validation/validation");
+const onRoadPriceModel = require("../model/onRoadPriceModel");
 
 const insuranceForm = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -32,31 +33,29 @@ const insuranceForm = async (req, res) => {
     return res.status(500).send({ status: false, message: error.message });
   }
 };
+//=======================================================================================
 
 const getInsurance = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   try {
     const filter = req.query;
-
+    const sortOptions = {}; 
     let data = [];
 
     if (Object.keys(filter).length === 0) {
       // No query parameters provided
-      data = await insuranceModel.aggregate([
-        { $match: { isDeleted: false } },
-        { $group: { _id: "$phone", doc: { $first: "$$ROOT" } } },
-        { $replaceRoot: { newRoot: "$doc" } },
-      ]);
+      sortOptions.createdAt = -1;
+      const data = await insuranceModel.find({isDeleted:false}).sort(sortOptions);
+      return res.status(200).send({ status: true, data: data });
     } else {
+      const filterDate = filter.date;
+      
+
       data = await insuranceModel.aggregate([
-        { $match: { isDeleted: false } },
-        {
-          $sort: {
-            [Object.keys(filter)[0]]: parseInt(Object.values(filter)[0], 10),
-          },
-        },
+        { $match: { isDeleted: false, date: filterDate } },
         { $group: { _id: "$phone", doc: { $first: "$$ROOT" } } },
         { $replaceRoot: { newRoot: "$doc" } },
+        { $sort: { createdAt: -1 } },
       ]);
     }
 
@@ -66,20 +65,22 @@ const getInsurance = async (req, res) => {
   }
 };
 
+
 //===================================================================
 const dupilicateInsurance = async (req, res) => {
-    try {
-      const repeatedPhoneNumbers = await insuranceModel.aggregate([
-        { $group: { _id: "$phone", count: { $sum: 1 }, docs: { $push: "$$ROOT" } } },
-        { $match: { count: { $gt: 1 } } },
-        { $project: { _id: 0, phoneNumber: "$_id", count: 1, docs: 1 } }
-      ]);
-  
-      return res.status(200).send({ status: true, data: repeatedPhoneNumbers });
-    } catch (error) {
-      return res.status(500).send({ status: false, message: error.message });
-    }
-  };
+  try {
+    const repeatedPhoneNumbers = await insuranceModel.aggregate([
+      { $group: { _id: "$phone",  docs: { $push: "$$ROOT" } ,count: { $sum: 1 },} },
+      { $match: { count: { $gt: 1 } } },
+      { $project: { _id: 0, phoneNumber: "$_id", count: 1, docs: 1 } }
+    ]);
+
+    return res.status(200).send({ status: true, data: repeatedPhoneNumbers });
+  } catch (error) {
+    return res.status(500).send({ status: false, message: error.message });
+  }
+};
+
   
 //====================================================================================
 const sortInsurance = async (req, res) => {
@@ -90,11 +91,11 @@ const sortInsurance = async (req, res) => {
     if (Object.keys(filter).length === 0) {
       // No query parameters provided, sort by createdAt in descending order
       sortOptions.createdAt = -1;
-      const data = await insuranceModel.find({isDeleted:false}).sort(sortOptions);
+      const data = await onRoadPriceModel.find({isDeleted:false}).sort(sortOptions);
       return res.status(200).send({ status: true, data: data });
     } else {
       // Sort by the provided filter parameters
-      const data = await insuranceModel.find({isDeleted:false}).sort(filter);
+      const data = await onRoadPriceModel.find({isDeleted:false}).sort(filter);
       return res.status(200).send({ status: true, data: data });
     }
   } catch (error) {
