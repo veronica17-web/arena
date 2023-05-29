@@ -61,7 +61,7 @@ const dupilicateService = async (req, res) => {
     }
   };
 
-  //==============================================================================
+  //================================================================
   const sortServices = async (req, res) => {
     try {
       const filter = req.query;

@@ -11,11 +11,12 @@ date:{
 time :{
     type:String,
 },
-sno:{
-    type:String
-},count :{
-    type:Number,
-    default:0
+isDeleted: {
+    type: Boolean,
+    default: false
+},
+deletedAt: {
+    type: Date
 },
 }, { timestamps: true })
 module.exports = mongoose.model('popup', popupSchema)

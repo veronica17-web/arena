@@ -1,52 +1,52 @@
-const popupModel = require("../model/popupModel")
-
-const {isValid, isMobileNumber, isValidEmail,isValidPincode,checkPassword,checkname,checkISBN,checkDate,isRating,isValidBody}=require("../validation/validation")
+const popupModel = require("../model/popupModel");
+const moment = require("moment")
+require("moment-timezone");
 const views = async (req, res) => {
-    try {
-        let data = req.body
-        let {phone} = data
-        if (isValidBody(data)) return res.status(400).send({ status: false, message: "Enter the data to submit" });
-        //validating user phone
-        if (!phone) return res.status(400).send({ status: false, message: "User Phone number is required" });
-        if (!isMobileNumber(phone.trim())) return res.status(400).send({ status: false, message: "Please Enter a valid Phone number" });
+  try {
+    let data = req.body;
+   
+    moment.tz.setDefault("Asia/Kolkata");
+    let dates = moment().format("DD-MM-YYYY");
+    let times = moment().format("HH:mm:ss");
+    data.date = dates;
+    data.time = times;
+    let saveDate = await popupModel.create(data);
+    res.status(201).send({ status: true, data: saveDate });
+  } catch (error) {
+    return res.status(500).send({ status: false, message: error.message });
+  }
+};
 
-        var currentdate = new Date();
-        var datetime = currentdate.getDay() + "-" + currentdate.getMonth()
-            + "-" + currentdate.getFullYear()
-        let time = + currentdate.getHours() + ":"
-            + currentdate.getMinutes() + ":" + currentdate.getSeconds();
-        data.date = datetime
-        data.time = time
-        let getdataCount = await PopupModel.find().count()
-        data.sno = getdataCount + 1
-        let saveDate = await PopupModel.create(data)
-        res.status(201).send({ status: true, data: saveDate })
-    } catch (error) {
+//=================================================================
+const getPopups = async (req, res) => {
+    try {
+        const filter = req.query;
+        const sortOptions = {}; 
+        let data = [];
+    
+        if (Object.keys(filter).length === 0) {
+          // No query parameters provided
+          sortOptions.createdAt = -1;
+          const data = await popupModel.find({isDeleted:false}).sort(sortOptions);
+          return res.status(200).send({ status: true, data: data });
+        } else {
+          const filterDate = filter.date;
+          data = await popupModel.aggregate([
+            { $match: { isDeleted: false, date: filterDate } },
+            { $group: { _id: "$phone", doc: { $first: "$$ROOT" } } },
+            { $replaceRoot: { newRoot: "$doc" } },
+            { $sort: { createdAt: -1 } },
+          ]);
+        }
+    
+        return res.status(200).send({ status: true, data: data });
+      } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
-    }
+      }
+};
 
-}
-const getPopups = async (req,res)=>{
-    try {
-        //let filter = { isDeleted: false }
-        let data = await popupModel.find({
-            $expr: {
-                $eq: [
-                    { $dateToString: { format: '%d-%m-%Y', date: '$$NOW' } },
-                    { $dateToString: { format: '%d-%m-%Y', date: '$created_on' } },
-                ],
-            },
-        })
-        
-        res.status(200).send({ status: true, data: data })
-    } catch (error) {
-        return res.send({ status: false, message: error.message })
-    }
-
-}
-
-const sorting =  async (req,res)=>{
-let data = req.query
-
-}
-module.exports = { views,getPopups }
+const sortPopup = async (req, res) => {
+  let data = req.query;
+  
+};
+module.exports = { views, getPopups };

@@ -6,33 +6,38 @@ const {insuranceForm,getInsurance ,dupilicateInsurance,sortInsurance}=require('.
 const {finance,getfinanace , dupilicateFinance , sortFinance}=require('../controller/financeController')
 const {Serviceform,getservices, dupilicateService, sortServices}=require("../controller/seviceconroller")
 const {onRoadPrice,getOnRoadPrice ,duplicateOnRoadPrice , sortOnRoadPrice}= require("../controller/onRoadPriceController")
+const {register , login}=require("../controller/UserController")
+const {authentication}=require("../middleware/auth")
+//=========================================================================
+router.post("/register",register)
+router.post("/login",login)
 //=========================popups==========================================
 router.post("/popup",views)
 router.get("/getPopups",getPopups)
 //=====================drivingschool==================================
 router.post("/drvingSchool",drivingform)
-router.get("/getdrivingschooldata",getdrivingschooldata)
-router.get("/dupilicateDrivingSchool",dupilicateDrivingSchool)
-router.get("/sortdrivingschool",sortdrivingschool)
+router.get("/getdrivingschooldata",authentication, getdrivingschooldata)
+router.get("/dupilicateDrivingSchool",authentication,dupilicateDrivingSchool)
+router.get("/sortdrivingschool",authentication,sortdrivingschool)
 
 //============================Insurance================================
 router.post("/insurance",insuranceForm)
-router.get("/getInsurance",getInsurance)
-router.get("/dupilicateInsurance",dupilicateInsurance)
-router.get("/sortInsurance",sortInsurance)
+router.get("/getInsurance",authentication,getInsurance)
+router.get("/dupilicateInsurance",authentication,dupilicateInsurance)
+router.get("/sortInsurance",authentication,sortInsurance)
 //======================finance  ========================================
 router.post('/finance',finance)
-router.get("/getfinanace",getfinanace)
-router.get('/dupilicateFinance',dupilicateFinance)
-router.get("/sortFinance",sortFinance)
+router.get("/getfinanace",authentication,getfinanace)
+router.get('/dupilicateFinance',authentication,dupilicateFinance)
+router.get("/sortFinance",authentication,sortFinance)
 //==========================services=======================================
 router.post("/Serviceform",Serviceform)
-router.get("/getservices",getservices)
-router.get("/dupilicateService" , dupilicateService)
-router.get("/sortServices",sortServices)
+router.get("/getservices",authentication,getservices)
+router.get("/dupilicateService" ,authentication, dupilicateService)
+router.get("/sortServices",authentication,sortServices)
 //==================onRoadPrice==========================================
 router.post("/onRoadPrice",onRoadPrice)
-router.get("/getOnRoadPrice",getOnRoadPrice)
-router.get("/duplicateOnRoadPrice",duplicateOnRoadPrice)
-router.get("/sortOnRoadPrice",sortOnRoadPrice)
+router.get("/getOnRoadPrice",authentication,getOnRoadPrice)
+router.get("/duplicateOnRoadPrice",authentication,duplicateOnRoadPrice)
+router.get("/sortOnRoadPrice",authentication,sortOnRoadPrice)
 module.exports = router 
