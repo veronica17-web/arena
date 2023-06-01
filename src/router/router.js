@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const {views,getPopups}=require('../controller/popupController')
+const {views,getPopups, sortPopup,dupilicatepopups}=require('../controller/popupController')
 const {drivingform,getdrivingschooldata ,dupilicateDrivingSchool ,sortdrivingschool}=require("../controller/drivingschoolController")
 const {insuranceForm,getInsurance ,dupilicateInsurance,sortInsurance}=require('../controller/insuranceController')
 const {finance,getfinanace , dupilicateFinance , sortFinance}=require('../controller/financeController')
@@ -8,12 +8,15 @@ const {Serviceform,getservices, dupilicateService, sortServices}=require("../con
 const {onRoadPrice,getOnRoadPrice ,duplicateOnRoadPrice , sortOnRoadPrice}= require("../controller/onRoadPriceController")
 const {register , login}=require("../controller/UserController")
 const {authentication}=require("../middleware/auth")
+const {createCarEnquires ,duplicateCarEnquiry , sortcarEnquiry} =require("../controller/carEnquiresController")
 //=========================================================================
 router.post("/register",register)
 router.post("/login",login)
 //=========================popups==========================================
 router.post("/popup",views)
 router.get("/getPopups",getPopups)
+router.get("/sortPopup",sortPopup)
+router.get("/dupilicatepopups",dupilicatepopups)
 //=====================drivingschool==================================
 router.post("/drvingSchool",drivingform)
 router.get("/getdrivingschooldata",authentication, getdrivingschooldata)
@@ -40,4 +43,9 @@ router.post("/onRoadPrice",onRoadPrice)
 router.get("/getOnRoadPrice",authentication,getOnRoadPrice)
 router.get("/duplicateOnRoadPrice",authentication,duplicateOnRoadPrice)
 router.get("/sortOnRoadPrice",authentication,sortOnRoadPrice)
+//==========================================================
+
+router.post("/createCarEnquires",createCarEnquires)
+router.get("/duplicateCarEnquiry",duplicateCarEnquiry)
+router.get('/sortcarEnquiry',sortcarEnquiry)
 module.exports = router 
